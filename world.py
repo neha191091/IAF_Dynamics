@@ -192,6 +192,7 @@ class PendulumFullObs(BaseWorld):
         self.env.state = state
 
     def _transfer_obs(self, env_obs):
+        env_obs[2] /= 8.0
         return env_obs[:self.n_obs]
 
     def set_goal(self, goal):
