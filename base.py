@@ -1,14 +1,21 @@
 import tensorflow as tf
 import numpy as np
+import sys
 
 
 def lookup(what, where, default=None):
     """Return ``where.what`` if what is a string, otherwise what. If not found
     return ``default``."""
-    if isinstance(what, (str, unicode)):
-        res = getattr(where, what, default)
+    if sys.version_info <= (3,0):
+        if isinstance(what, (str, unicode)):
+            res = getattr(where, what, default)
+        else:
+            res = what
     else:
-        res = what
+        if isinstance(what, (bytes, str)):
+            res = getattr(where, what, default)
+        else:
+            res = what
     return res
 
 
