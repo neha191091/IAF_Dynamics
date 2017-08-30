@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.contrib.distributions import MultivariateNormalDiag, kl_divergence
 from base import Mlp
-from world import PendulumFullObs
 
 
 class Transition(object):
@@ -50,9 +49,9 @@ class Transition(object):
     def one_step(self, a, x):
         
         z = a[0]
-        u, h = x
+        u, enc = x
 
-        q_mean, q_var = self.q_transition(z, h, u)
+        q_mean, q_var = self.q_transition(z, enc, u)
         p_mean, p_var = self.p_transition(z, u)
         
         q = MultivariateNormalDiag(q_mean, tf.sqrt(q_var))
