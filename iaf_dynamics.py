@@ -59,10 +59,14 @@ class BaselineTransitionNoKL(object):
         z_step = q.sample()
 
         # TODO: Not sure why this reshape is necessary...
-        log_q = tf.reshape(p.log_prob(z_step), shape=tf.shape(a[1]))
+        log_q = tf.reshape(q.log_prob(z_step), shape=tf.shape(a[1]))
         log_p = tf.reshape(p.log_prob(z_step), shape=tf.shape(a[2]))
-        
-        return z_step, log_q, log_p
+
+        # TODO: Remove after verifying the veracity of monte carlo est
+        kl = kl_divergence(q,p)
+        mc_est = log_q -log_p
+
+        return z_step, log_q, log_p, kl, mc_est
 
     def gen_one_step(self, z, u):
 
@@ -106,7 +110,9 @@ class DVBFNoKL():
         z0 = q0.sample()
                                
         # Trajectory rollout in latent space + calculation of KL(q(z'|enc, u, z) || p(z'|z))
-        z, log_q, log_p = tf.scan(self.transition.one_step, (self.u[:-1], enc[1:]), (z0, tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],])))
+
+        # TODO: Change after verifying the veracity of monte carlo est
+        z, log_q, log_p, kl, mc_est = tf.scan(self.transition.one_step, (self.u[:-1], enc[1:]), (z0, tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],])))
         self.z = tf.concat([[z0], z], 0)
         
         # Get the generative distribution p(x|z) + calculation of the reconstruntion error
@@ -123,7 +129,11 @@ class DVBFNoKL():
         self.rec_loss = rec_loss
         self.log_p = log_p
         self.log_q = log_q
-        self.total_loss = tf.reduce_mean(self.rec_loss + self.log_p - self.log_q)
+        self.total_loss = tf.reduce_mean(self.rec_loss + self.log_q - self.log_p)
+
+        # TODO: Remove after verifying the veracity of monte carlo est
+        self.kl_analytical = kl
+        self.kl_monte_carlo = mc_est
 
         # Use the Adam optimizer with clipped gradients
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -163,7 +173,7 @@ class DVBFNoKL():
     def get_generative_dist(self, z):
         x_mean = self.generative_mlp(tf.reshape(z, (-1, self.n_latent)))
         x_mean = tf.reshape(x_mean, (tf.shape(z)[0], -1, self.n_obs))
-        x_var = tf.zeros_like(x_mean) + self.x_var ** 2 + 1e-8 
+        x_var = tf.zeros_like(x_mean) + self.x_var ** 2 + 1e-8
         x_var = tf.reshape(x_var, (tf.shape(z)[0], -1, self.n_obs))
         
         return MultivariateNormalDiag(x_mean, tf.sqrt(x_var))
@@ -175,5 +185,6 @@ class DVBFNoKL():
         self.saver.restore(self.sess, path)
         
     def train(self, batch_x, batch_u, learning_rate):
-        _, total_loss = self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
-        return total_loss
+        # TODO: Change after verifying the veracity of monte carlo est
+        _, total_loss, kl, mc = self.sess.run((self.optimizer, self.total_loss , self.kl_analytical, self.kl_monte_carlo), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
+        return total_loss, kl, mc
