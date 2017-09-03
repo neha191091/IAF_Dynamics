@@ -29,8 +29,8 @@ class Transition(object):
 
         # Get mean and var
         out = self.q_mlp(zeu)
-        mean = out[:, :self.n_latent]
-        var = out[:, self.n_latent:]
+        mean = out[:, :self.n_latent] # first n_latent vars are mean
+        var = out[:, self.n_latent:] # next n_latent vars are variance
 
         return mean, var ** 2 + 1e-5
 
@@ -87,17 +87,27 @@ class DVBF():
         self.n_enc = self.n_latent
 
         # The placeholder from the input
+        # [time_steps, batch_size, dimensions]
         self.x = tf.placeholder(tf.float32, [None, None, self.n_obs], name="X")
         self.u = tf.placeholder(tf.float32, [None, None, self.n_control], name="U")
 
         # Initialize p(z0), p(x|z), q(z'|enc, u, z) and p(z'|z) as well as the mlp that
         # generates a low dimensional encoding of x, called enc
+
+        # p(x|z)
         self._init_generative_dist()
+
+        # p(z0) or q(z0|x0) or q0
         self._init_start_dist()
+
+        # gives encoding of x enc
         self._init_encoding_mlp()
+
+        # q(z'|enc, u, z) and p(z'|z,u)
         self.transition = Transition(self.n_latent, self.n_enc, self.n_control)
         
-        # Get the encoded representation of the observations (this makes sense when observations are highdimensional images for example)
+        # Get the encoded representation of the observations
+        # (this makes sense when observations are high dimensional images for example)
         enc = self.get_enc_rep(self.x)
         
         # Get the latent start state
@@ -105,6 +115,7 @@ class DVBF():
         z0 = q0.sample()
                                
         # Trajectory rollout in latent space + calculation of KL(q(z'|enc, u, z) || p(z'|z))
+        # one_step(self, a, x), a will be filled by the initializer or the previous output
         z, kl_loss = tf.scan(self.transition.one_step, (self.u[:-1], enc[1:, :, :]), (z0, tf.zeros([tf.shape(z0)[0],])))
         self.z = tf.concat([[z0], z], 0)
         
@@ -145,6 +156,7 @@ class DVBF():
         
     def _init_generative_dist(self):
         self.generative_mlp = Mlp(self.n_latent, [128], self.n_obs, ['relu'], lambda x: x)
+        # here we are using constant generative variance just like IAF
         self.x_var = tf.Variable(tf.random_normal((1, self.n_obs)) * 0.001)
         
     def get_start_dist(self, obs0):
