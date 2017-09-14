@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import sys
-
+slim = tf.contrib.slim
 
 def lookup(what, where, default=None):
     """Return ``where.what`` if what is a string, otherwise what. If not found
@@ -91,3 +91,78 @@ class Mlp(Layer):
             output = l(output)
 
         return output
+
+# TODO: Check if correct
+
+class AR_Layer(Layer):
+    def __init__(self, mask, name=None):
+        self.W = tf.Variable(tf.truncated_normal(mask.shape, stddev = 0.1))
+        self.mask = mask
+        self.b = tf.Variable(tf.constant(0., shape = [mask.shape[1], ]))
+        super(AR_Layer, self).__init__(name)
+
+    def __call__(self, x, applyActivation):
+        W = tf.multiply(self.W, self.mask)
+        output = tf.add(tf.matmul(x, W), self.b)
+        if applyActivation is True:
+            output = tf.nn.elu(output)
+        return output
+
+
+class AR_Net(Layer):
+    def __init__(self, z_size, h_size, shape = [256, 256], name=None):
+        self.masks = ar_masks(z_size, h_size, shape)
+        self.z_size = z_size
+        self.layers = []
+        for i in range(len(shape)):
+            hidden = AR_Layer(self.masks[i])
+            self.layers.append(hidden)
+        self.layers.append(AR_Layer(self.masks[len(shape)]))
+        super(AR_Net, self).__init__(name)
+
+    def __call__(self, h, z_init):
+        output = tf.concat([h, z_init], 1)
+        n_layers = len(self.layers)
+        for i in range(n_layers):
+            layer = self.layers[i]
+            if i < n_layers-1:
+                output = layer(output, True)
+            else:
+                output = layer(output, False)
+        s = output[:, :self.z_size]
+        m = output[:, self.z_size:]
+        var_f0 = tf.nn.sigmoid(s)
+        z_temp = (1 - var_f0) * m + var_f0 * z_init
+        z_temp = tf.reverse(z_temp, [False, True])
+        return var_f0, z_temp
+
+
+def ar_masks(z_size, h_size, shape = [256, 256]):
+    masks = []
+
+    n_in = h_size + z_size
+    id_in = np.concatenate(([-1 for _ in range(h_size)], range(z_size)))
+
+    for m in range(len(shape)):
+
+        n_out = shape[m]
+        id_out = np.random.randint(0, z_size - 1, size = n_out)
+        mask = np.zeros([n_in, n_out], dtype = np.float32)
+        for k_in in range(n_in):
+            for k_out in range(n_out):
+                if id_out[k_out] >= id_in[k_in]:
+                    mask[k_in, k_out] = 1
+        masks.append(mask)
+
+        n_in = n_out
+        id_in = id_out
+
+    n_out = 2 * z_size
+    id_out = np.concatenate((range(z_size), range(z_size)))
+    mask = np.zeros([n_in, n_out], dtype = np.float32)
+    for k_in in range(n_in):
+        for k_out in range(n_out):
+            if id_out[k_out] > id_in[k_in]:
+                mask[k_in, k_out] = 1
+    masks.append(mask)
+    return masks
