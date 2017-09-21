@@ -95,24 +95,30 @@ class BaselineTransitionNoKL(object):
 
     def one_step_IAF(self, a, x):
         z = a[0]
-        log_q_prev = a[1]
+        log_q = a[1]
         u, enc = x
 
         # q_var should have the same dimension as z0
         z_step, q_var = self.q_transitionIAF(z, enc, u)
         p_mean, p_var = self.p_transition(z, u)
 
+        print('p_mean', p_mean.shape)
+        print('p_var', p_var)
+
         #q = MultivariateNormalDiag(q_mean, tf.sqrt(q_var))
         p = MultivariateNormalDiag(p_mean, tf.sqrt(p_var))
 
         # TODO: Not sure why this reshape is necessary...
         #log_q = tf.reshape(log_q_prev, shape=tf.shape(a[1]))
-        print(log_q_prev.shape)
-        print(q_var.shape)
-        log_q = tf.reshape(log_q_prev - tf.log(q_var + 1e-5), shape = tf.shape(a[1]))
-        print(log_q.shape)
-        log_p = tf.reshape(p.log_prob(z_step), shape = tf.shape(a[2]))
-
+        print('log_q_prev', log_q.shape)
+        print('q_var' , q_var.shape)
+        # take diagonal sum of q_var
+        log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5))
+        #log_q = tf.reshape(log_q_prev - tf.log(q_var + 1e-5), shape = tf.shape(a[1]))
+        print('log_q', log_q.shape)
+        #log_p = tf.reshape(p.log_prob(z_step), shape = tf.shape(a[2]))
+        log_p = p.log_prob(z_step)
+        print('log_p', log_p.shape)
         return z_step, log_q, log_p
 
     def gen_one_step(self, z, u):
@@ -142,6 +148,7 @@ class DVBFNoKL():
         self.x = tf.placeholder(tf.float32, [None, None, self.n_obs], name="X")
         self.u = tf.placeholder(tf.float32, [None, None, self.n_control], name="U")
 
+
         # Initialize p(z0), p(x|z), q(z'|enc, u, z) and p(z'|z) as well as the mlp that
         # generates a low dimensional encoding of x, called enc
         self._init_generative_dist()
@@ -155,18 +162,22 @@ class DVBFNoKL():
         # Get the latent start state
         q0 = self.get_start_dist(self.x[0])
         z0 = q0.sample()
+        print("z0 shape: ", z0.shape)
         log_q0 = q0.log_prob(z0)
-        print(log_q0.shape)
-        log_q0 = tf.reshape(log_q0, shape = [tf.shape(z0)[0], n_latent])
-        # p0 = MultivariateNormalDiag(tf.zeros(tf.shape(z0)), tf.ones(tf.shape(z0)))
-        # log_p0 = tf.reshape(p0.log_prob(z0), shape = [tf.shape(z0)[0],])
+        print("log_q0 shape", log_q0.shape)
+        #log_q0 = tf.reshape(log_q0, shape = [tf.shape(z0)[0], n_latent])
+        print("log_q0 shape", log_q0.shape)
+        p0 = MultivariateNormalDiag(tf.zeros(tf.shape(z0)), tf.ones(tf.shape(z0)))
+        log_p0 = p0.log_prob(z0)
+        #log_p0 = tf.reshape(p0.log_prob(z0), shape = [tf.shape(z0)[0],]) #should be 128
+        print('log_p0 shape', log_p0.shape)
                                
         # Trajectory rollout in latent space + calculation of KL(q(z'|enc, u, z) || p(z'|z))
 
         # TODO: Change after verifying the veracity of monte carlo est
         # z, log_q, log_p= tf.scan(self.transition.one_step, (self.u[:-1], enc[1:]), (z0, tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],])))
         # TODO: Replace with  z, log_q, log_p
-        z, log_q, log_p = tf.scan(self.transition.one_step_IAF, (self.u[:-1], enc[1:]),  (z0, log_q0, tf.zeros([tf.shape(z0)[0], ])))
+        z, log_q, log_p = tf.scan(self.transition.one_step_IAF, (self.u[:-1], enc[1:]),  (z0, log_q0, log_p0))
         self.z = tf.concat([[z0], z], 0)
         
         # Get the generative distribution p(x|z) + calculation of the reconstruntion error
@@ -183,9 +194,6 @@ class DVBFNoKL():
         self.rec_loss = rec_loss
         self.log_p = log_p
         self.log_q = log_q
-        print(log_p)
-        print(log_q)
-        print(rec_loss)
         self.total_loss = tf.reduce_mean(self.rec_loss + self.log_q - self.log_p)
 
         # Use the Adam optimizer with clipped gradients
