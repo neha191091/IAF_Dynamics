@@ -185,5 +185,5 @@ class DVBF():
         self.saver.restore(self.sess, path)
         
     def train(self, batch_x, batch_u, learning_rate):
-        _, total_loss, kl_loss, rec_loss = self.sess.run((self.optimizer, self.total_loss, self.kl_loss, self.rec_loss), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
-        return total_loss, kl_loss, rec_loss
+        _, total_loss, kl_loss, rec_loss, x_mean = self.sess.run((self.optimizer, self.total_loss, self.kl_loss, self.rec_loss, self.gen_x_mean), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
+        return total_loss, kl_loss, rec_loss, x_mean

@@ -113,7 +113,7 @@ class BaselineTransitionNoKL(object):
         print('log_q_prev', log_q.shape)
         print('q_var' , q_var.shape)
         # take diagonal sum of q_var
-        log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5))
+        log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5), axis=1)
         #log_q = tf.reshape(log_q_prev - tf.log(q_var + 1e-5), shape = tf.shape(a[1]))
         print('log_q', log_q.shape)
         #log_p = tf.reshape(p.log_prob(z_step), shape = tf.shape(a[2]))
@@ -247,5 +247,5 @@ class DVBFNoKL():
         
     def train(self, batch_x, batch_u, learning_rate):
         # TODO: Change after verifying the veracity of monte carlo est
-        _, total_loss= self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
-        return total_loss
+        _, total_loss, rec_loss, x_mean= self.sess.run((self.optimizer, self.total_loss, tf.reduce_mean(self.rec_loss), self.gen_x_mean), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
+        return total_loss, rec_loss,  x_mean
