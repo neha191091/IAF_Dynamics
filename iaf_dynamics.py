@@ -183,6 +183,7 @@ class DVBFNoKL():
         # Get the generative distribution p(x|z) + calculation of the reconstruntion error
         px = self.get_generative_dist(z)
         rec_loss = -px.log_prob(self.x[1:])
+        self.px_mean = px.mean()
         
         # Generating trajectories given only an initial observation
         gen_z = tf.scan(self.transition.gen_one_step, self.u[:-1], z0)
