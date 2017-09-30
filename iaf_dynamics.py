@@ -183,6 +183,7 @@ class DVBFNoKL():
         # Get the generative distribution p(x|z) + calculation of the reconstruntion error
         px = self.get_generative_dist(z)
         rec_loss = -px.log_prob(self.x[1:])
+        self.rec_x_mean = px.mean()
         
         # Generating trajectories given only an initial observation
         gen_z = tf.scan(self.transition.gen_one_step, self.u[:-1], z0)
@@ -247,5 +248,5 @@ class DVBFNoKL():
         
     def train(self, batch_x, batch_u, learning_rate):
         # TODO: Change after verifying the veracity of monte carlo est
-        _, total_loss, rec_loss, x_mean= self.sess.run((self.optimizer, self.total_loss, tf.reduce_mean(self.rec_loss), self.gen_x_mean), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
+        _, total_loss, rec_loss, x_mean= self.sess.run((self.optimizer, self.total_loss, tf.reduce_mean(self.rec_loss), self.rec_x_mean), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
         return total_loss, rec_loss,  x_mean
