@@ -3,23 +3,10 @@ import numpy as np
 from tensorflow.contrib.distributions import MultivariateNormalDiag, kl_divergence
 from base import Mlp, AR_Net
 
+
 class BaselineTransitionNoKL(object):
 
     def __init__(self, n_latent, n_enc, n_control):
-
-        # self.n_latent = n_latent
-        # self.n_enc = n_enc
-        # self.n_control = n_control
-        #
-        # # Mlp for posterior and prior
-        # n_input_q = self.n_enc + self.n_latent + self.n_control
-        # n_input_p = self.n_latent + self.n_control
-        # n_output = self.n_latent + self.n_latent
-        # layers = [256, 256]
-        # activation = ['relu', 'relu']
-        # out_activation = lambda x: x
-        # self.q_mlp = Mlp(n_input_q, layers, n_output, activation, out_activation)
-        # self.p_mlp = Mlp(n_input_p, layers, n_output, activation, out_activation)
 
         self.n_latent = n_latent
         self.n_enc = n_enc
@@ -38,20 +25,7 @@ class BaselineTransitionNoKL(object):
         self.q_mlp = AR_Net(z_size = z_size_q, h_size = h_size_q, shape = layers)
         self.p_mlp = Mlp(n_input_p, layers, n_output, activation, out_activation)
 
-    # def q_transition(self, z, enc, u):
-    #
-    #     # Concat the inputs
-    #     zeu = tf.concat([z, enc, u], 1)
-    #
-    #     # Get mean and var
-    #     out = self.q_mlp(zeu)
-    #     mean = out[:, :self.n_latent]
-    #     var = out[:, self.n_latent:]
-    #
-    #     return mean, var ** 2 + 1e-5
-
-
-    def q_transitionIAF(self, z, enc, u):
+    def q_transition_IAF(self, z, enc, u):
 
         # Concat the inputs
         h = tf.concat([enc, u], 1)
@@ -60,7 +34,6 @@ class BaselineTransitionNoKL(object):
         var_f0, z_temp = self.q_mlp(h, z)
 
         return z_temp, var_f0
-
 
     def p_transition(self, z, u):
 
@@ -74,52 +47,20 @@ class BaselineTransitionNoKL(object):
 
         return mean, var ** 2 + 1e-5
 
-    # def one_step(self, a, x):
-    #
-    #     z = a[0]
-    #     u, enc = x
-    #
-    #     q_mean, q_var = self.q_transition(z, enc, u)
-    #     p_mean, p_var = self.p_transition(z, u)
-    #
-    #     q = MultivariateNormalDiag(q_mean, tf.sqrt(q_var))
-    #     p = MultivariateNormalDiag(p_mean, tf.sqrt(p_var))
-    #
-    #     z_step = q.sample()
-    #
-    #     # TODO: Not sure why this reshape is necessary...
-    #     log_q = tf.reshape(q.log_prob(z_step), shape=tf.shape(a[1]))
-    #     log_p = tf.reshape(p.log_prob(z_step), shape=tf.shape(a[2]))
-    #
-    #     return z_step, log_q, log_p
-
     def one_step_IAF(self, a, x):
         z = a[0]
         log_q = a[1]
         u, enc = x
 
-        # q_var should have the same dimension as z0
-        z_step, q_var = self.q_transitionIAF(z, enc, u)
+        z_step, q_var = self.q_transition_IAF(z, enc, u)
         p_mean, p_var = self.p_transition(z, u)
 
-        print('p_mean', p_mean.shape)
-        print('p_var', p_var)
-
-        #q = MultivariateNormalDiag(q_mean, tf.sqrt(q_var))
         p = MultivariateNormalDiag(p_mean, tf.sqrt(p_var))
 
-        # TODO: Not sure why this reshape is necessary...
-        #log_q = tf.reshape(log_q_prev, shape=tf.shape(a[1]))
-        print('log_q_prev', log_q.shape)
-        print('q_var' , q_var.shape)
-        # take diagonal sum of q_var
-        # TODO: reduce sum might cause an issue here
         log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5), axis=1)
-        #log_q = tf.reshape(log_q_prev - tf.log(q_var + 1e-5), shape = tf.shape(a[1]))
-        print('log_q', log_q)
-        #log_p = tf.reshape(p.log_prob(z_step), shape = tf.shape(a[2]))
+
         log_p = p.log_prob(z_step)
-        print('log_p', log_p.shape)
+
         return z_step, log_q, log_p
 
     def gen_one_step(self, z, u):
@@ -134,21 +75,21 @@ class BaselineTransitionNoKL(object):
 
 
 class DVBFNoKL():
-    def __init__(self, n_obs, n_control, n_latent, n_enc, learning_rate=0.001):
+    def __init__(self, n_obs, n_control, n_latent, n_enc):
 
         self.learning_rate = tf.placeholder(tf.float32)
+        self.annealing_rate = tf.placeholder(tf.float32)
         
         # Dimensions
         self.n_output = n_obs
         self.n_obs = n_obs
         self.n_control = n_control
         self.n_latent = n_latent
-        self.n_enc = self.n_latent
+        self.n_enc = n_enc
 
         # The placeholder from the input
         self.x = tf.placeholder(tf.float32, [None, None, self.n_obs], name="X")
         self.u = tf.placeholder(tf.float32, [None, None, self.n_control], name="U")
-
 
         # Initialize p(z0), p(x|z), q(z'|enc, u, z) and p(z'|z) as well as the mlp that
         # generates a low dimensional encoding of x, called enc
@@ -163,21 +104,11 @@ class DVBFNoKL():
         # Get the latent start state
         q0 = self.get_start_dist(self.x[0])
         z0 = q0.sample()
-        print("z0 shape: ", z0.shape)
         log_q0 = q0.log_prob(z0)
-        print("log_q0 shape", log_q0.shape)
-        #log_q0 = tf.reshape(log_q0, shape = [tf.shape(z0)[0], n_latent])
-        print("log_q0 shape", log_q0.shape)
         p0 = MultivariateNormalDiag(tf.zeros(tf.shape(z0)), tf.ones(tf.shape(z0)))
         log_p0 = p0.log_prob(z0)
-        #log_p0 = tf.reshape(p0.log_prob(z0), shape = [tf.shape(z0)[0],]) #should be 128
-        print('log_p0 shape', log_p0.shape)
                                
         # Trajectory rollout in latent space + calculation of KL(q(z'|enc, u, z) || p(z'|z))
-
-        # TODO: Change after verifying the veracity of monte carlo est
-        # z, log_q, log_p= tf.scan(self.transition.one_step, (self.u[:-1], enc[1:]), (z0, tf.zeros([tf.shape(z0)[0],]), tf.zeros([tf.shape(z0)[0],])))
-        # TODO: Replace with  z, log_q, log_p
         z, log_q, log_p = tf.scan(self.transition.one_step_IAF, (self.u[:-1], enc[1:]),  (z0, log_q0, log_p0))
         self.z = tf.concat([[z0], z], 0)
         
@@ -194,8 +125,8 @@ class DVBFNoKL():
         
         # Create the losses
         self.rec_loss = rec_loss
-        self.log_p = log_p
-        self.log_q = log_q
+        self.log_p = log_p * self.annealing_rate
+        self.log_q = log_q * self.annealing_rate
         self.total_loss = tf.reduce_mean(self.rec_loss + self.log_q - self.log_p)
 
         # Use the Adam optimizer with clipped gradients
@@ -247,7 +178,9 @@ class DVBFNoKL():
     def restore(self, path):
         self.saver.restore(self.sess, path)
         
-    def train(self, batch_x, batch_u, learning_rate):
-        # TODO: Change after verifying the veracity of monte carlo est
-        _, total_loss= self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x, self.u: batch_u, self.learning_rate: learning_rate})
+    def train(self, batch_x, batch_u, learning_rate, annealing_rate):
+        _, total_loss= self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x,
+                                                                                   self.u: batch_u,
+                                                                                   self.learning_rate: learning_rate,
+                                                                                   self.annealing_rate: annealing_rate})
         return total_loss
