@@ -133,7 +133,7 @@ class AR_Net(Layer):
         m = output[:, self.z_size:]
         var_f0 = tf.nn.sigmoid(s)
         z_temp = (1 - var_f0) * m + var_f0 * z_init
-        z_temp = tf.reverse(z_temp, [False, True])
+        #z_temp = tf.reverse(z_temp, [False, True])
         return var_f0, z_temp
 
 

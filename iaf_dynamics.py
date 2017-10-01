@@ -113,9 +113,10 @@ class BaselineTransitionNoKL(object):
         print('log_q_prev', log_q.shape)
         print('q_var' , q_var.shape)
         # take diagonal sum of q_var
-        log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5))
+        # TODO: reduce sum might cause an issue here
+        log_q = log_q - tf.reduce_sum(tf.log(q_var + 1e-5), axis=1)
         #log_q = tf.reshape(log_q_prev - tf.log(q_var + 1e-5), shape = tf.shape(a[1]))
-        print('log_q', log_q.shape)
+        print('log_q', log_q)
         #log_p = tf.reshape(p.log_prob(z_step), shape = tf.shape(a[2]))
         log_p = p.log_prob(z_step)
         print('log_p', log_p.shape)
