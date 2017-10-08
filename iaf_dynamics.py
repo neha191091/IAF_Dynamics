@@ -2,6 +2,13 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.contrib.distributions import MultivariateNormalDiag, kl_divergence
 from base import Mlp, AR_Net
+import utils
+
+
+#TODO: Check :
+# comparison with baseline
+# variance=1
+# come up with an environment with multimodal posteriors
 
 
 class BaselineTransitionNoKL(object):
@@ -75,7 +82,7 @@ class BaselineTransitionNoKL(object):
 
 
 class DVBFNoKL():
-    def __init__(self, n_obs, n_control, n_latent, n_enc):
+    def __init__(self, n_obs, n_control, n_latent, n_enc, chkpoint_file=None):
 
         self.learning_rate = tf.placeholder(tf.float32)
         self.annealing_rate = tf.placeholder(tf.float32)
@@ -113,8 +120,14 @@ class DVBFNoKL():
         self.z = tf.concat([[z0], z], 0)
         
         # Get the generative distribution p(x|z) + calculation of the reconstruntion error
-        px = self.get_generative_dist(z)
-        rec_loss = -px.log_prob(self.x[1:])
+        # TODO: Including x[0], revert if doesn't work
+        # px = self.get_generative_dist(z)
+        # rec_loss = -px.log_prob(self.x[1:])
+
+        # TODO: Including x[0], Remove if doesn't work
+        px = self.get_generative_dist(self.z)
+        rec_loss = -px.log_prob(self.x)
+
         self.px_mean = px.mean()
         
         # Generating trajectories given only an initial observation
@@ -122,11 +135,18 @@ class DVBFNoKL():
         self.gen_z = tf.concat([[z0], gen_z], 0)
         gen_px = self.get_generative_dist(self.gen_z)
         self.gen_x_mean = gen_px.mean()
-        
+
+        # TODO: Including x[0], Remove if doesn't work
+        log_p = tf.concat([[log_p0], log_p], 0)
+        log_q = tf.concat([[log_q0], log_q], 0)
+
         # Create the losses
         self.rec_loss = rec_loss
         self.log_p = log_p * self.annealing_rate
         self.log_q = log_q * self.annealing_rate
+
+
+
         self.total_loss = tf.reduce_mean(self.rec_loss + self.log_q - self.log_p)
 
         # Use the Adam optimizer with clipped gradients
@@ -142,6 +162,8 @@ class DVBFNoKL():
         # Launch the session
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
+        if chkpoint_file:
+            utils.load_checkpoint(self.sess, chkpoint_file)
         
     def _init_start_dist(self):
         self.init_mlp = Mlp(self.n_obs, [128], 2 * self.n_latent, ['relu'], lambda x: x)
