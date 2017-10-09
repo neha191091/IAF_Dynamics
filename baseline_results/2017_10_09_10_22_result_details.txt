@@ -1,0 +1,3 @@
+training_epochs = 1000
+initial learning_rate = 0.0005
+decay_rate = 0.97
