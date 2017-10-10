@@ -1,0 +1,7 @@
+chkpoint_file = None
+chkpoint_file = None
+training_epochs = 1000
+annealing_epochs = 500
+initial annealing_rate = 0.002
+initial learning_rate = 0.001
+decay_rate = 0.99

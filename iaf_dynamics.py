@@ -201,8 +201,8 @@ class DVBFNoKL():
         self.saver.restore(self.sess, path)
         
     def train(self, batch_x, batch_u, learning_rate, annealing_rate):
-        _, total_loss, rec_loss = self.sess.run((self.optimizer, self.total_loss, tf.reduce_mean(self.rec_loss)), feed_dict={self.x: batch_x,
+        _, total_loss = self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x,
                                                                                    self.u: batch_u,
                                                                                    self.learning_rate: learning_rate,
                                                                                    self.annealing_rate: annealing_rate})
-        return total_loss, rec_loss
+        return total_loss
