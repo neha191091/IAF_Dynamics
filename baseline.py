@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.contrib.distributions import MultivariateNormalDiag, kl_divergence
 from base import Mlp
-
+import utils
 
 class Transition(object):
 
@@ -75,7 +75,7 @@ class Transition(object):
 
 
 class DVBF():
-    def __init__(self, n_obs, n_control, n_latent, n_enc, learning_rate=0.001):
+    def __init__(self, n_obs, n_control, n_latent, n_enc, learning_rate=0.001, chkpoint_file = None):
 
         self.learning_rate = tf.placeholder(tf.float32)
         
@@ -147,6 +147,8 @@ class DVBF():
         # Launch the session
         self.sess = tf.InteractiveSession()
         self.sess.run(tf.global_variables_initializer())
+        if chkpoint_file:
+            utils.load_checkpoint(self.sess, chkpoint_file)
         
     def _init_start_dist(self):
         self.init_mlp = Mlp(self.n_obs, [128], 2 * self.n_latent, ['relu'], lambda x: x)

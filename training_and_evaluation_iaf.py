@@ -35,7 +35,7 @@ n_control = 1
 n_latent =  4
 n_enc = 10
 chkpoint_file = None
-m = DVBFNoKL(n_obs, n_control, n_latent, n_enc, chkpoint_file=None)
+m = DVBFNoKL(n_obs, n_control, n_latent, n_enc, chkpoint_file=chkpoint_file)
 
 # Training parameters
 training_epochs = 1000
@@ -43,7 +43,7 @@ batch_size = 16
 steps_per_epoch = X.shape[1] / batch_size
 display_step = 10
 chkpt_step = 100
-annealing_epochs = 500
+annealing_epochs = 600
 annealing_rate = 1.0 / annealing_epochs
 learning_rate = 0.001
 min_learning_rate = 0.0002
@@ -56,6 +56,7 @@ timestamp = utils.get_timestamp()
 epochs = []
 total_loss = []
 rec_loss = []
+kl_loss = []
 
 import os
 
@@ -88,35 +89,46 @@ for epoch in range(training_epochs):
     print("Epoch: ",epoch)
     avg_total_loss = .0
     avg_rec_loss = .0
+    avg_kl_loss = .0
     for i in range(steps_per_epoch):
         batch_x, batch_u = sample_batch(X, U, batch_size)
-        temp_total_loss = m.train(batch_x, batch_u, learning_rate, annealing_rate)
+        temp_total_loss, temp_rec_loss, temp_kl_loss = m.train(batch_x, batch_u, learning_rate, annealing_rate)
         avg_total_loss += temp_total_loss
-        #avg_rec_loss += temp_rec_loss
+        avg_rec_loss += temp_rec_loss
+        avg_kl_loss += temp_kl_loss
 
     avg_total_loss /= steps_per_epoch
     avg_rec_loss /= steps_per_epoch
+    avg_kl_loss /= steps_per_epoch
 
     total_loss.append(avg_total_loss)
-    #rec_loss.append(avg_rec_loss)
+    rec_loss.append(avg_rec_loss)
+    kl_loss.append(avg_kl_loss)
     epochs.append(epoch)
 
-    # Plot the results
-    # if epoch % chkpt_step == 0 or epoch == training_epochs - 1:
-    #
-    #     plt.close()
-    #     f, axarr = plt.subplots(1, 2, figsize=(13, 4))
-    #     axarr[0].plot(epochs, total_loss)
-    #     axarr[0].set_xlabel('Epochs')
-    #     axarr[0].set_title('Total Loss')
-    #     axarr[0].annotate("Learning Rate: " + str(learning_rate), xy=(0.05, 0.05), xycoords='axes fraction')
-    #     axarr[0].set_ylim(-9.0, 10)
-    #     axarr[1].plot(epochs, rec_loss)
-    #     axarr[1].set_xlabel('Epochs')
-    #     axarr[1].set_title('Rec Loss')
-    #     axarr[1].set_ylim(-9.0, 10)
-    #
-    #     plt.savefig(_RESULT_PATH + '%s' % timestamp + '_Each_Loss_Epoch_' + str(epoch) + '.png')
+    #Plot the results
+    if epoch % chkpt_step == 0 or epoch == training_epochs - 1:
+
+        plt.close()
+        f, axarr = plt.subplots(1, 3, figsize=(13, 4))
+        axarr[0].plot(epochs, total_loss)
+        axarr[0].set_xlabel('Epochs')
+        axarr[0].set_title('Total Loss')
+        axarr[0].annotate("Learning Rate: " + str(learning_rate), xy=(0.05, 0.05), xycoords='axes fraction')
+        axarr[0].annotate("Total Loss: " + str(total_loss[-1]), xy=(0.05, 0.0), xycoords='axes fraction')
+        axarr[0].set_ylim(-9.0, 10)
+        axarr[1].plot(epochs, rec_loss)
+        axarr[1].set_xlabel('Epochs')
+        axarr[1].set_title('Rec Loss')
+        axarr[1].annotate("Rec Loss: " + str(rec_loss[-1]), xy=(0.05, 0.0), xycoords='axes fraction')
+        axarr[1].set_ylim(-9.0, 10)
+        axarr[2].plot(epochs, kl_loss)
+        axarr[2].set_xlabel('Epochs')
+        axarr[2].set_title('KL Loss')
+        axarr[2].annotate("KL Loss: " + str(kl_loss[-1]), xy=(0.05, 0.0), xycoords='axes fraction')
+        axarr[2].set_ylim(.0, 10)
+
+        plt.savefig(_RESULT_PATH + '%s' % timestamp + '_Each_Loss_Epoch_' + str(epoch) + '.png')
 
         # display.display(plt.gcf())
         # display.clear_output(wait=True)

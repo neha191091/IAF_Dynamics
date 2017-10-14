@@ -26,12 +26,12 @@ def save_checkpoint(sess, timestamp, checkpoint=0, var_list=None):
 def load_checkpoint(sess, filename):
     # load model
     fname = filename
-    try:
-        saver = tf.train.Saver()
-        saver.restore(sess, fname)
-        print("Model restored from %s" % fname)
-    except:
-        print("Failed to load model from %s" % fname)
+    #try:
+    saver = tf.train.Saver()
+    saver.restore(sess, fname)
+    print("Model restored from %s" % fname)
+    #except:
+    #    print("Failed to load model from %s" % fname)
 
 
 

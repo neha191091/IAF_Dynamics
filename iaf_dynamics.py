@@ -141,13 +141,16 @@ class DVBFNoKL():
         log_q = tf.concat([[log_q0], log_q], 0)
 
         # Create the losses
-        self.rec_loss = rec_loss
+        # self.rec_loss = rec_loss
         self.log_p = log_p * self.annealing_rate
         self.log_q = log_q * self.annealing_rate
+        self.rec_loss = tf.reduce_mean(rec_loss)
+        self.kl_loss = tf.reduce_mean( self.log_q - self.log_p)
 
 
 
-        self.total_loss = tf.reduce_mean(self.rec_loss + self.log_q - self.log_p)
+        # self.total_loss = tf.reduce_mean(rec_loss + self.log_q - self.log_p)
+        self.total_loss = self.total_loss = self.kl_loss + self.rec_loss
 
         # Use the Adam optimizer with clipped gradients
         self.optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -201,8 +204,8 @@ class DVBFNoKL():
         self.saver.restore(self.sess, path)
         
     def train(self, batch_x, batch_u, learning_rate, annealing_rate):
-        _, total_loss = self.sess.run((self.optimizer, self.total_loss), feed_dict={self.x: batch_x,
+        _, total_loss, rec_loss_val, kl_loss_val = self.sess.run((self.optimizer, self.total_loss, self.rec_loss, self.kl_loss), feed_dict={self.x: batch_x,
                                                                                    self.u: batch_u,
                                                                                    self.learning_rate: learning_rate,
                                                                                    self.annealing_rate: annealing_rate})
-        return total_loss
+        return total_loss, rec_loss_val, kl_loss_val
