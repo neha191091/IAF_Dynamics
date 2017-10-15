@@ -1,7 +1,0 @@
-batch_size = 16
-chkpoint_file = None
-training_epochs = 1000
-annealing_epochs = 600
-initial annealing_rate = 0.00166666666667
-initial learning_rate = 0.001
-decay_rate = 0.99
