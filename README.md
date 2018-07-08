@@ -1,6 +1,6 @@
 # IAF_Dynamics
 
-This work has been implemented with equal contributions from [Neha Das](https://github.com/neha191091), [Jakob Breuninger](https://github.com/JakobBreuninger) and [Sumit Dugar](https://github.com/dugarsumit)
+This work has been implemented with equal contributions from [Jakob Breuninger](https://github.com/JakobBreuninger), [Neha Das](https://github.com/neha191091) and [Sumit Dugar](https://github.com/dugarsumit)
 
 
 
