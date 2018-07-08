@@ -1,0 +1,14 @@
+2017_10_17_09_11:  rec_diff_baseline: 0.004882657524;  gen_diff_baseline: 0.153624235724;  rec_loss: -11.1943
+2017_10_17_09_12:  rec_diff_iaf: 0.366655862096;  gen_diff_iaf: 0.254920305749;  rec_loss shape: ();  rec_loss: 168.778
+2017_10_17_09_12:  rec_diff_inserted_iaf: 0.247239789453;  gen_diff_inserted_iaf: 0.171461573231;  rec_loss: 8538.53
+2017_10_17_09_41:  rec_diff_iaf: 0.268114584772;  gen_diff_iaf: 0.188581130423;  rec_loss: 102.909
+2017_10_17_09_56:  rec_diff_baseline: 0.00491417652022;  gen_diff_baseline: 0.15556973509;  rec_loss: -11.1664
+2017_10_17_09_57:  rec_diff_inserted_iaf: 0.311290591511;  gen_diff_inserted_iaf: 0.191149499078;  rec_loss: 12743.6
+2017_10_17_09_59:  rec_diff_iaf: 0.389805057247;  gen_diff_iaf: 0.191544431218;  rec_loss: 210.818
+2017_10_17_10_55:  rec_diff_iaf: 0.408290758077;  gen_diff_iaf: 0.214853443778;  rec_loss: 200.035
+2017_10_17_10_56:  rec_diff_baseline: 0.00496073190656;  gen_diff_baseline: 0.15613693091;  rec_loss: -11.1407
+2017_10_17_10_57:  rec_diff_iaf: 0.339049300678;  gen_diff_iaf: 0.253339461153;  rec_loss: 141.646
+2017_10_17_10_58:  rec_diff_iaf: 0.42945631236;  gen_diff_iaf: 0.191699630368;  rec_loss: 259.533
+2017_10_17_10_58:  rec_diff_iaf: 0.446712085015;  gen_diff_iaf: 0.229105129885;  rec_loss: 204.955
+2017_10_17_10_59:  rec_diff_iaf: 0.360937948357;  gen_diff_iaf: 0.168401564998;  rec_loss: 524.682
+2017_10_18_10_49:  rec_diff_baseline: 0.00354949092445;  gen_diff_baseline: 0.205778412788;  rec_loss: -12.1716

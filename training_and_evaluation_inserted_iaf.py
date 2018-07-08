@@ -43,10 +43,10 @@ batch_size = 16
 steps_per_epoch = X.shape[1] / batch_size
 display_step = 10
 chkpt_step = 100
-annealing_epochs = 600
+annealing_epochs = 1
 annealing_rate = 1.0 / annealing_epochs
-learning_rate = 0.001
-min_learning_rate = 0.0002
+learning_rate = 0.0005
+min_learning_rate = 0.00005
 decay_rate = 0.99
 
 import utils

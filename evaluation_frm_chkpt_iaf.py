@@ -24,7 +24,7 @@ n_control = 1
 n_latent =  4
 n_enc = 10
 
-chkpoint_file = 'chkpt/2017_10_13_10_20_checkpoint600.ckpt'
+chkpoint_file = 'chkpt/2017_10_13_10_20_checkpoint400.ckpt'
 m = DVBFNoKL(3, 1, 4, 10, chkpoint_file=chkpoint_file)
 
 
@@ -36,22 +36,41 @@ if not os.path.exists(_RESULT_PATH):
 
 
 X_temp, U_temp, R_temp, S_temp = pickle.load(open("data/test_set.p", "rb"))
-# X_temp = X_temp[:,:16,:]
-# U_temp = U_temp[:,:16,:]
-gen_px = m.get_generative_dist(m.gen_z)
-gen_rec_loss = -gen_px.log_prob(m.x)
-gen_rec_loss = tf.reduce_mean(gen_rec_loss)
-x_obs, gen_rec_loss_val, rec_loss_val = m.sess.run((m.gen_x_mean, gen_rec_loss, m.rec_loss), feed_dict={m.x: X_temp, m.u:U_temp})
-#gen_rec_loss_val = np.mean(gen_rec_loss_val)
-#rec_loss_val = np.mean(rec_loss_val)
-gen_diff = np.mean(np.abs(X_temp - x_obs))
+x_gen, x_obs, rec_loss_val = m.sess.run((m.gen_x_mean, m.px_mean, m.rec_loss), feed_dict={m.x: X_temp, m.u:U_temp})
+rec_diff = np.mean(np.abs(X_temp - x_obs))
+gen_diff = np.mean(np.abs(X_temp - x_gen))
+
 
 result_details_path = _RESULT_PATH + 'evaluation_details.txt'
 result_details_file = open(result_details_path, 'a+')
-result_details_file.write(str(timestamp) + ':  gen_diff_iaf: ' + str(gen_diff) + ';  rec_loss shape: ' + str(rec_loss_val.shape) + ';  rec_loss: ' + str(rec_loss_val) + '\n')
+result_details_file.write(str(timestamp) + ':  rec_diff_iaf: ' + str(rec_diff) + ';  gen_diff_iaf: ' + str(gen_diff) + ';  rec_loss: ' + str(rec_loss_val) + '\n')
 result_details_file.close()
 # Plot the position and reward of low dim pendulum
 e = int(np.random.rand() * 100)
+e=100
+plt.close()
+f, axarr = plt.subplots(1, 2, figsize=(15, 6))
+axarr[0].plot(x_gen[:, e, 0])
+axarr[0].plot(x_gen[:, e, 1])
+axarr[0].plot(x_gen[:, e, 2])
+axarr[0].set_ylim(-1.1, 1.1)
+axarr[1].plot(X_temp[:, e, 0])
+axarr[1].plot(X_temp[:, e, 1])
+axarr[1].plot(X_temp[:, e, 2])
+axarr[1].set_ylim(-1.1, 1.1)
+axarr[0].set_title('Generated Trajectory from IAF Checkpoint: ')
+axarr[1].set_title('Generated Trajectory from Ground Truth: ')
+plt.savefig(_RESULT_PATH + '%s' % timestamp + '_PositionPlotIafGen.png')
+# plt.show()
+
+plt.close()
+f, axarr = plt.subplots(1, 2, figsize=(15, 6))
+axarr[0].plot(np.arctan2(x_gen[:, e, 1], x_gen[:, e, 0]))
+axarr[1].plot(np.arctan2(X_temp[:, e, 1], X_temp[:, e, 0]))
+axarr[0].set_title('Generated Trajectory from IAF Checkpoint: ')
+axarr[1].set_title('Generated Trajectory from Ground Truth: ')
+plt.savefig(_RESULT_PATH + '%s' % timestamp + '_ArcTanPlotIafGen.png')
+
 plt.close()
 f, axarr = plt.subplots(1, 2, figsize=(15, 6))
 axarr[0].plot(x_obs[:, e, 0])
@@ -64,10 +83,7 @@ axarr[1].plot(X_temp[:, e, 2])
 axarr[1].set_ylim(-1.1, 1.1)
 axarr[0].set_title('Generated Trajectory from Iaf Checkpoint: ' + chkpoint_file)
 axarr[1].set_title('Generated Trajectory from Ground Truth: ')
-axarr[0].annotate("Reconstruction Loss: " + str(rec_loss_val), xy=(0.05, 0.05), xycoords='axes fraction')
-axarr[0].annotate("Reconstruction Loss: " + str(gen_diff), xy=(0.05, 0.1), xycoords='axes fraction')
-axarr[0].annotate("Reconstruction loss of generated trajectory: " + str(gen_rec_loss_val), xy=(0.05, 0.0), xycoords='axes fraction')
-plt.savefig(_RESULT_PATH + '%s' % timestamp + '_PositionPlotIaf.png')
+plt.savefig(_RESULT_PATH + '%s' % timestamp + '_PositionPlotIafObs.png')
 
 plt.close()
 f, axarr = plt.subplots(1, 2, figsize=(15, 6))
@@ -75,6 +91,4 @@ axarr[0].plot(np.arctan2(x_obs[:, e, 1], x_obs[:, e, 0]))
 axarr[1].plot(np.arctan2(X_temp[:, e, 1], X_temp[:, e, 0]))
 axarr[0].set_title('Generated Trajectory from Iaf Checkpoint: ' + chkpoint_file)
 axarr[1].set_title('Generated Trajectory from Ground Truth: ')
-axarr[0].annotate("Reconstruction Loss: " + str(rec_loss_val), xy=(0.05, 0.05), xycoords='axes fraction')
-axarr[0].annotate("Reconstruction loss of generated trajectory: " + str(gen_rec_loss_val), xy=(0.05, 0.0), xycoords='axes fraction')
-plt.savefig(_RESULT_PATH + '%s' % timestamp + '_ArcTanPlotIaf.png')
+plt.savefig(_RESULT_PATH + '%s' % timestamp + '_ArcTanPlotIafObs.png')
