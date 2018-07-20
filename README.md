@@ -1,7 +1,12 @@
 # IAF_Dynamics
 
-This work has been implemented with equal contributions from [Jakob Breuninger](https://github.com/JakobBreuninger), [Neha Das](https://github.com/neha191091) and [Sumit Dugar](https://github.com/dugarsumit)
+Through this work, we propose the incorporation of Inverse Autoregressive Flows [4] in determining the state space (latents) in a dynamical system model. This reduces the number of samples that need to be obtained in order to approximate the posterior distribution (and thus the underlying states/latents for a set of observations and controls) from one per time step to one per sequence of observations. Our experiments with pendulum-v0 [1], an environment from openai gym confirmed that the accuracy with which the observations are generated are close to the state of the art for sequence models.
 
+The results from this work, along with its benefits and issues are present in the following poster (PDF version [here](Documents/Inserted_IAF_poster.pdf))
+
+![alt text](Documents/Poster.jpg)
+
+This work has been implemented in collaboration with [Jakob Breuninger](https://github.com/JakobBreuninger) and [Sumit Dugar](https://github.com/dugarsumit). 
 
 
 References : 
